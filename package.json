@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
-    "emotion": "^10.0.9"
+    "emotion": "^10.0.9",
+    "leaflet": "^1.5.1"
   }
 }

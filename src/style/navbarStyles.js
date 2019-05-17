@@ -2,7 +2,7 @@ import { css } from 'emotion';
 
 const navStyle = css({
   padding: '20px 0',
-  marginBottom: '20px',
+  marginBottom: 100,
   width: '100%',
   height: 'auto',
   boxShadow: '0 4px 8px 0 rgba(0, 0, 0, 0.2)',

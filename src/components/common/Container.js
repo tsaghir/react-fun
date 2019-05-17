@@ -7,22 +7,15 @@ import {
   containerFooterStyle,
 } from '../../style/containerStyles';
 
-const Container = ({
-  containerTitle,
-  withFooter,
-  component: Component,
-  buttons,
-}) => {
+const Container = ({ containerTitle, withFooter, component, buttons, cx }) => {
   return (
-    <div className={containerStyle}>
+    <div className={`${containerStyle} ${cx}`}>
       <Title
         titleText={containerTitle}
         textSize={25}
         cx={containerTitleStyle}
       />
-      <div className={containerContentStyle}>
-        <Component />
-      </div>
+      <div className={containerContentStyle}>{component}</div>
       {withFooter && (
         <div className={containerFooterStyle}>{buttons.map(item => item)}</div>
       )}
