@@ -1,8 +1,15 @@
 import React from 'react';
+import { connect } from 'react-redux';
+import { Spinner } from 'reactstrap';
 import Map from './Map';
 import Button from '../common/Button';
 import Container from '../common/Container';
 import { getLocationAPI } from '../../helpers/dataFetcher';
+import {
+  loadIssLocationData,
+  DO_DATA_POLLING,
+} from '../../redux-store/actions';
+import { doDataPolling } from '../../helpers/dataPolling';
 
 class ISSPositionComponent extends React.Component {
   constructor() {
@@ -25,29 +32,61 @@ class ISSPositionComponent extends React.Component {
     });
   };
 
-  handleRefresh = () => {
+  getLocationVariables = () => {
+    const { locationData } = this.props;
+    const { latitude, longitude } = this.state;
+    if (locationData)
+      return {
+        latitude: Number(locationData.iss_position.latitude),
+        longitude: Number(locationData.iss_position.longitude),
+      };
+    return { latitude, longitude };
+  };
+
+  handleRefreshClick = () => {
     this.setLocation();
   };
 
-  buttons = [
-    <Button key="1" buttonText="Refresh" onClick={this.handleRefresh} />,
-    <Button key="2" buttonText="Auto sync" />,
+  handleAutoSyncClick = () => {
+    const { dispatch, doDataPolling } = this.props;
+    dispatch({ type: DO_DATA_POLLING, doDataPolling });
+  };
+
+  buttons = ({ doDataPolling }) => [
+    <Button key="1" buttonText="Refresh" onClick={this.handleRefreshClick} />,
+    <Button
+      key="2"
+      buttonText={
+        doDataPolling ? <Spinner size="sm" color="light" /> : 'Auto sync'
+      }
+      onClick={this.handleAutoSyncClick}
+    />,
   ];
 
   render() {
-    const { latitude, longitude } = this.state;
+    const { latitude, longitude } = this.getLocationVariables();
     return (
       longitude &&
       latitude && (
-        <Container
-          containerTitle="ISS position 🌍"
-          component={<Map latitude={latitude} longitude={longitude} />}
-          buttons={this.buttons}
-          withFooter
-        />
+        <div>
+          <Container
+            containerTitle="ISS current position 🌍"
+            component={<Map latitude={latitude} longitude={longitude} />}
+            buttons={this.buttons(this.props)}
+            withFooter
+          />
+        </div>
       )
     );
   }
 }
 
-export default ISSPositionComponent;
+const mapStateToProps = state => {
+  const { locationData, doDataPolling } = state;
+  const newState = { locationData, doDataPolling };
+  return doDataPolling ? newState : { doDataPolling };
+};
+
+export default doDataPolling(loadIssLocationData)(
+  connect(mapStateToProps)(ISSPositionComponent),
+);
