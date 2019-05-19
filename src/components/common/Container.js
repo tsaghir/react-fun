@@ -7,7 +7,13 @@ import {
   containerFooterStyle,
 } from '../../style/containerStyles';
 
-const Container = ({ containerTitle, withFooter, component, buttons, cx }) => {
+const Container = ({
+  containerTitle,
+  withFooter = false,
+  component,
+  buttons,
+  cx,
+}) => {
   return (
     <div className={`${containerStyle} ${cx}`}>
       <Title

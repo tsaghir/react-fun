@@ -13,6 +13,7 @@ const containerStyle = css({
   right: 0,
   boxShadow: '0px 4px 10px rgba(0,0,0,0.3)',
   overflow: 'hidden',
+  marginBottom: 100,
 });
 
 const containerTitleStyle = css({

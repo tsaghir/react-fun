@@ -10,6 +10,7 @@ import {
   DO_DATA_POLLING,
 } from '../../redux-store/actions';
 import { doDataPolling } from '../../helpers/dataPolling';
+import { css } from 'emotion';
 
 class ISSPositionComponent extends React.Component {
   constructor() {
@@ -63,6 +64,15 @@ class ISSPositionComponent extends React.Component {
     />,
   ];
 
+  customTitle = (latitude, longitude) => (
+    <div>
+      <span>{`ISS current position 🌍`}</span>
+      <span
+        className={css({ float: 'right', fontSize: 20, paddingTop: 20 })}
+      >{`latitude: ${latitude}  longitude:${longitude}`}</span>
+    </div>
+  );
+
   render() {
     const { latitude, longitude } = this.getLocationVariables();
     return (
@@ -70,7 +80,7 @@ class ISSPositionComponent extends React.Component {
       latitude && (
         <div>
           <Container
-            containerTitle="ISS current position 🌍"
+            containerTitle={this.customTitle(latitude, longitude)}
             component={<Map latitude={latitude} longitude={longitude} />}
             buttons={this.buttons(this.props)}
             withFooter
