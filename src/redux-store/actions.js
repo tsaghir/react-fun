@@ -1,5 +1,6 @@
 export const DATA_LOAD_SUCCESS = 'DATA_LOAD_SUCCESS';
 export const DO_DATA_POLLING = 'DO_DATA_POLLING';
+export const LOCATION = 'LOCATION';
 
 export const loadIssLocationData = () => dispatch => {
   return fetch('http://api.open-notify.org/iss-now.json')

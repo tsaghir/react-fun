@@ -1,18 +1,27 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
-import moment from 'moment';
+import { connect } from 'react-redux';
 import * as d3 from 'd3';
+import { css } from 'emotion';
+import { pluck, uniq, sort } from 'ramda';
+import { Button } from '../../components';
+import { fetchCometData } from '../../helpers/dataFetcher';
 
-export default class BubbleChart extends React.Component {
+class BubbleChart extends React.Component {
+  state = {
+    data: null,
+    center: true,
+    selectedYear: '',
+  };
+
   componentDidMount() {
-    this.svg = ReactDOM.findDOMNode(this);
-    this.graphProps = {
-      zoom: 1.1,
-      offsetX: -0.05,
-      offsetY: -0.01,
-    };
+    this.getCometData();
     this.renderChart();
   }
+
+  getCometData = async () => {
+    const cometData = await fetchCometData();
+    this.setState({ data: cometData });
+  };
 
   componentDidUpdate() {
     const { width, height } = this.props;
@@ -24,127 +33,167 @@ export default class BubbleChart extends React.Component {
   render() {
     const { width, height } = this.props;
 
-    return <svg id="bubbleChart" width={width} height={height} />;
+    return (
+      <div className={tooltipStyle}>
+        <div className={css({ display: 'inline-block', float: 'left' })}>
+          <Button id="centerBtn" buttonText="Center" />
+          {this.renderDropdownYear()}
+        </div>
+        <svg id="bubbleChart" width={width} height={height} />
+      </div>
+    );
   }
 
   renderChart = () => {
     const { width, height } = this.props;
-    const margin = { top: 10, right: 20, bottom: 30, left: 50 };
-    let correctedWidth = width - margin.left - margin.right;
-    let correctedHeight = height - margin.top - margin.bottom;
+    const { data, selectedYear, center } = this.state;
 
-    const getRandomColor = () => {
-      var letters = '0123456789ABCDEF';
-      var color = '#';
-      for (var i = 0; i < 6; i++) {
-        color += letters[Math.floor(Math.random() * 16)];
-      }
-      return color;
-    };
+    d3.selectAll('svg > *').remove();
 
     let svg = d3
       .select('#bubbleChart')
       .append('svg')
-      .attr('width', correctedWidth + margin.left + margin.right)
-      .attr('height', correctedHeight + margin.top + margin.bottom)
+      .attr('width', width)
+      .attr('height', height)
       .append('g')
-      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+      .attr('transform', 'translate(0,0)');
 
-    d3.json('https://data.nasa.gov/resource/y77d-th95.json').then(rawData => {
-      let data = rawData.map(item => {
-        return {
-          id: item.name,
-          x: item.reclat,
-          y: item.reclong,
-          size: item.mass,
-          year: moment(item.year).format('YYYY'),
-        };
-      });
+    const { minSize, maxSize } = this.getMinMaxCometSize();
 
-      const pack = d3
-        .pack()
-        .size([1000, 800])
-        .padding(5);
+    this.radiusScale =
+      minSize &&
+      maxSize &&
+      d3
+        .scaleSqrt()
+        .domain([minSize, maxSize])
+        .range([10, 80]);
 
-      const root = d3
-        .hierarchy({ children: data })
-        .sum(function(d) {
-          return d.size;
+    const forceX = () =>
+      d3
+        .forceX(d => {
+          if (d.year === selectedYear) return 1100;
+          return 500;
         })
-        .sort(function(a, b) {
-          return Number(b.year) - Number(a.year);
-        });
+        .strength(0.05);
 
-      // Pass the data to the pack layout to calculate the distribution.
-      const nodes = pack(root).leaves();
+    const simulation = d3
+      .forceSimulation()
+      .force('x', center ? d3.forceX(width / 2).strength(0.05) : forceX())
+      .force('y', d3.forceY(height / 2).strength(0.05))
+      .force('collide', d3.forceCollide(d => this.radiusScale(d.size) + 1));
 
-      const color = getRandomColor();
-      this.renderBubbles(nodes, svg, color);
-    });
+    data && this.renderBubbles(svg, simulation, data);
   };
 
-  renderBubbles = (nodes, svg) => {
-    const bubbleChart = svg;
+  renderBubbles = (svg, simulation, data) => {
+    var tooltip = d3
+      .select('body')
+      .append('div')
+      .attr('class', 'tooltip')
+      .style('opacity', 0);
 
-    const node = bubbleChart
-      .selectAll('.node')
-      .data(nodes)
+    let circles = svg
+      .selectAll('.comets')
+      .data(data)
       .enter()
-      .append('g')
-      .attr('class', 'node')
-      .attr('transform', function(d) {
-        return 'translate(' + d.x + ',' + d.y + ')';
-      })
-      .on('click', function(d) {
-        // bubbleClickFun(d.year);
-      });
-
-    node
       .append('circle')
-      .attr('id', function(d) {
-        return d.id;
-      })
-      .attr('r', function(d) {
-        return d.r - d.r * 0.04;
-      })
-      .style('fill', function(d) {
-        return d.color;
-      })
-      .style('z-index', 1)
-      .on('mouseover', function(d) {
-        d3.select(this).attr('r', d.r * 1.04);
-      })
-      .on('mouseout', function(d) {
-        const r = d.r - d.r * 0.04;
-        d3.select(this).attr('r', r);
+      .attr('class', 'comets')
+      .attr('r', d => this.radiusScale(d.size))
+      .attr('fill', d => this.setBubbleColor(d));
+
+    d3.select('#centerBtn').on('click', () => this.setState({ center: true }));
+
+    const ticked = () => circles.attr('cx', d => d.x).attr('cy', d => d.y);
+
+    circles
+      .append('svg:title')
+      .text(
+        d =>
+          `${d.id} (${d.year})\n\n latitude: ${d.latitude}\n longitude: ${
+            d.longitude
+          }`,
+      )
+      .on('mouseover', function() {
+        return tooltip.style('visibility', 'visible');
       });
 
-    const valueFont = {
-      family: 'Arial',
-      size: 12,
-      color: '#fff',
-      weight: 'bold',
-    };
-
-    node
-      .append('text')
-      .attr('class', 'value-text')
-      .style('font-size', `${valueFont.size}px`)
-      .style('font-weight', d => {
-        return valueFont.weight ? valueFont.weight : 600;
-      })
-      .style('font-family', valueFont.family)
-      .style('fill', () => {
-        return valueFont.color ? valueFont.color : '#000';
-      })
-      .style('stroke', () => {
-        return valueFont.lineColor ? valueFont.lineColor : '#000';
-      })
-      .style('stroke-width', () => {
-        return valueFont.lineWeight ? valueFont.lineWeight : 0;
-      })
-      .text(function(d) {
-        return d.name;
-      });
+    simulation.nodes(data).on('tick', ticked);
   };
+
+  setBubbleColor = item => {
+    const { latitude, longitude } = this.props;
+
+    if (
+      latitude - 10 < item.latitude &&
+      item.latitude < latitude + 10 &&
+      (longitude - 10 < item.longitude && item.longitude < longitude + 10)
+    )
+      return 'red';
+    return 'black';
+  };
+
+  getMinMaxCometSize = () => {
+    const { data } = this.state;
+    const size = data && pluck('size', data);
+    if (size) {
+      const minSize = 1;
+      const maxSize = Math.max.apply(Math, size);
+
+      return { minSize, maxSize };
+    }
+    return {};
+  };
+
+  renderDropdownYear = () => {
+    const { data } = this.state;
+    if (data) {
+      const diff = (a, b) => {
+        return a - b;
+      };
+      const uniqueYears = sort(diff, uniq(pluck('year', data)));
+
+      return (
+        <select
+          onChange={this.handleSelectChange}
+          className={css({
+            marginLeft: 15,
+            width: 120,
+            textAlignLast: 'center',
+            height: 45,
+            fontFamily: 'Roboto thin',
+            outline: 'none',
+          })}
+        >
+          {uniqueYears.map(year => (
+            <option key={year} value={year}>
+              {year}
+            </option>
+          ))}
+        </select>
+      );
+    }
+  };
+
+  handleSelectChange = e =>
+    this.setState({ selectedYear: e.target.value, center: false });
 }
+
+const mapStateToProps = state => {
+  const { currentLocation } = state;
+  return currentLocation;
+};
+
+export default connect(mapStateToProps)(BubbleChart);
+
+const tooltipStyle = css({
+  '& tooltip': {
+    position: 'absolute' /*very important*/,
+    textAlign: 'left',
+    padding: '5px 10px 5px 10px',
+    font: 'bold 11px sans-serif',
+    color: 'black',
+    background: 'yellow',
+    borderRadius: 8,
+    pointerEvents: 'none',
+  },
+});

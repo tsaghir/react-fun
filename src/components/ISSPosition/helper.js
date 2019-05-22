@@ -5,7 +5,8 @@ export const createMap = () =>
   L.map('map', {
     center: [58, 16],
     zoom: 4,
-    zoomControl: false,
+    zoomControl: true,
+    scrollWheelZoom: false,
     layers: [
       new L.tileLayer(
         'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',

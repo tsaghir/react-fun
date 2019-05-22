@@ -1,8 +1,12 @@
-import { DATA_LOAD_SUCCESS, DO_DATA_POLLING } from './actions';
+import { DATA_LOAD_SUCCESS, DO_DATA_POLLING, LOCATION } from './actions';
 
 const initialState = {
   locationData: [],
   doDataPolling: false,
+  currentLocation: {
+    latitude: null,
+    longitude: null,
+  },
 };
 
 const reducer = (state = initialState, action) => {
@@ -17,6 +21,12 @@ const reducer = (state = initialState, action) => {
       return {
         ...state,
         doDataPolling: !action.doDataPolling,
+      };
+
+    case LOCATION:
+      return {
+        ...state,
+        currentLocation: action.currentLocation,
       };
 
     default:

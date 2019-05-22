@@ -6,7 +6,7 @@ const NasaCometGraphComponent = () => {
   return (
     <Container
       containerTitle="Nasa comet data"
-      component={<D3BubbleChart width={1000} height={800} />}
+      component={<D3BubbleChart width={1300} height={900} />}
     />
   );
 };

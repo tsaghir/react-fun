@@ -8,6 +8,7 @@ import { getLocationAPI } from '../../helpers/dataFetcher';
 import {
   loadIssLocationData,
   DO_DATA_POLLING,
+  LOCATION,
 } from '../../redux-store/actions';
 import { doDataPolling } from '../../helpers/dataPolling';
 import { css } from 'emotion';
@@ -26,11 +27,21 @@ class ISSPositionComponent extends React.Component {
   }
 
   setLocation = async () => {
+    const { dispatch } = this.props;
     const data = await getLocationAPI();
+    const latitude = Number(data.iss_position.latitude);
+    const longitude = Number(data.iss_position.longitude);
+
     this.setState({
-      latitude: Number(data.iss_position.latitude),
-      longitude: Number(data.iss_position.longitude),
+      latitude,
+      longitude,
     });
+
+    const currentLocation = {
+      latitude,
+      longitude,
+    };
+    dispatch({ type: LOCATION, currentLocation });
   };
 
   getLocationVariables = () => {
@@ -47,7 +58,6 @@ class ISSPositionComponent extends React.Component {
   handleRefreshClick = () => {
     this.setLocation();
   };
-
   handleAutoSyncClick = () => {
     const { dispatch, doDataPolling } = this.props;
     dispatch({ type: DO_DATA_POLLING, doDataPolling });
@@ -69,7 +79,7 @@ class ISSPositionComponent extends React.Component {
       <span>{`ISS current position 🌍`}</span>
       <span
         className={css({ float: 'right', fontSize: 20, paddingTop: 20 })}
-      >{`latitude: ${latitude}  longitude:${longitude}`}</span>
+      >{`latitude: ${latitude}  longitude: ${longitude}`}</span>
     </div>
   );
 
